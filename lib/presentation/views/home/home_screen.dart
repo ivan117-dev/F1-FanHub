@@ -99,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         items: viewModel.topConstructors,
                         isDriver: false,
                         onTapMore: () {
-                          widget.onTabChangeRequest?.call(2);
+                          widget.onTabChangeRequest?.call(3);
                         },
                       ),
                     ],
