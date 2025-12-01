@@ -76,7 +76,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     // LISTA DE TARJETAS OPTIMIZADA
     return RefreshIndicator(
-      // Color de la bolita de carga (tu verde)
+      // Color de la bolita de carga
       onRefresh: () async {
         // Llamamos al método de forzar actualización
         await context.read<CalendarViewModel>().refreshSchedule();
