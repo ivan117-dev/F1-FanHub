@@ -203,7 +203,7 @@ class RaceResultList extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(
-                                Icons.flash_on,
+                                Icons.timer,
                                 size: 12,
                                 color: Colors.purple,
                               ),

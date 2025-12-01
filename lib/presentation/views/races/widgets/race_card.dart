@@ -503,7 +503,7 @@ class RaceCard extends StatelessWidget {
         },
         icon: const Icon(Icons.emoji_events, size: 22),
         label: const Text(
-          "VER RESULTADOS COMPLETOS",
+          "VER RESULTADOS",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 13,
