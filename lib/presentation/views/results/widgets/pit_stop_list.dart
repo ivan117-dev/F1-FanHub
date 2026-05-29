@@ -44,8 +44,8 @@ class PitStopList extends StatelessWidget {
           ),
           child: Row(
             children: [
-              SizedBox(
-                width: 50,
+              Expanded(
+                flex: 4,
                 child: Text(
                   "Piloto",
                   style: theme.textTheme.labelMedium?.copyWith(
@@ -54,9 +54,8 @@ class PitStopList extends StatelessWidget {
                   ),
                 ),
               ),
-              const Spacer(),
-              SizedBox(
-                width: 50,
+              Expanded(
+                flex: 2,
                 child: Center(
                   child: Text(
                     "Vuelta",
@@ -67,8 +66,8 @@ class PitStopList extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(
-                width: 50,
+              Expanded(
+                flex: 2,
                 child: Center(
                   child: Text(
                     "Stop",
@@ -79,8 +78,8 @@ class PitStopList extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(
-                width: 90,
+              Expanded(
+                flex: 3,
                 child: Center(
                   child: Text(
                     "Duración",
@@ -173,6 +172,7 @@ class PitStopList extends StatelessWidget {
 
                         // Nombre del piloto
                         Expanded(
+                          flex: 4,
                           child: Text(
                             _formatDriverName(stop.driverId),
                             style: theme.textTheme.titleMedium?.copyWith(
@@ -183,8 +183,8 @@ class PitStopList extends StatelessWidget {
                         ),
 
                         // Vuelta
-                        SizedBox(
-                          width: 50,
+                        Expanded(
+                          flex: 2,
                           child: Center(
                             child: Container(
                               padding: const EdgeInsets.symmetric(
@@ -209,8 +209,8 @@ class PitStopList extends StatelessWidget {
                         ),
 
                         // Número de parada
-                        SizedBox(
-                          width: 50,
+                        Expanded(
+                          flex: 2,
                           child: Center(
                             child: Container(
                               width: 32,
@@ -248,8 +248,8 @@ class PitStopList extends StatelessWidget {
                         ),
 
                         // Duración
-                        SizedBox(
-                          width: 90,
+                        Expanded(
+                          flex: 3,
                           child: Center(
                             child: Container(
                               padding: const EdgeInsets.symmetric(

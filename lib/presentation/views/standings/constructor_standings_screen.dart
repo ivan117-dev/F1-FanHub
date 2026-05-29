@@ -1,6 +1,8 @@
 import 'package:f1_fanhub/core/utils/flags_helper.dart';
 import 'package:f1_fanhub/core/utils/image_helper.dart';
 import 'package:f1_fanhub/core/utils/nationality_translator.dart';
+import 'package:f1_fanhub/domain/entities/standing.dart';
+import 'package:f1_fanhub/presentation/common/view_state.dart';
 import 'package:f1_fanhub/presentation/viewmodels/constructor_standings_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -27,6 +29,7 @@ class _ConstructorStandingsScreenState
   Widget build(BuildContext context) {
     final viewModel = context.watch<ConstructorStandingsViewModel>();
     final theme = Theme.of(context);
+    final state = viewModel.state;
 
     return Scaffold(
       appBar: AppBar(
@@ -36,18 +39,22 @@ class _ConstructorStandingsScreenState
         ),
         centerTitle: false,
       ),
-      body: _buildBody(viewModel, theme),
+      body: _buildBody(viewModel, theme, state),
     );
   }
 
-  Widget _buildBody(ConstructorStandingsViewModel viewModel, ThemeData theme) {
-    if (viewModel.isLoading) {
+  Widget _buildBody(
+    ConstructorStandingsViewModel viewModel,
+    ThemeData theme,
+    ViewState<List<ConstructorStanding>> state,
+  ) {
+    if (state.isLoading) {
       return Center(
         child: CircularProgressIndicator(color: theme.colorScheme.primary),
       );
     }
 
-    if (viewModel.errorMessage != null) {
+    if (state.hasError) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -61,7 +68,7 @@ class _ConstructorStandingsScreenState
               ),
               const SizedBox(height: 16),
               Text(
-                viewModel.errorMessage!,
+                state.message ?? 'Error cargando constructores',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge,
               ),
@@ -77,9 +84,37 @@ class _ConstructorStandingsScreenState
       );
     }
 
+    if (state.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.inbox_outlined, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                state.message ?? 'Sin datos de constructores',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => viewModel.refreshStandings(),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final constructors = state.data ?? [];
+
     // Calcular máximo de puntos
-    final maxPoints = viewModel.constructors.isNotEmpty
-        ? double.parse(viewModel.constructors.first.points)
+    final maxPoints = constructors.isNotEmpty
+        ? double.parse(constructors.first.points)
         : 100.0;
 
     return RefreshIndicator(
@@ -87,9 +122,9 @@ class _ConstructorStandingsScreenState
       onRefresh: () async => await viewModel.refreshStandings(),
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-        itemCount: viewModel.constructors.length,
+        itemCount: constructors.length,
         itemBuilder: (context, index) {
-          final standing = viewModel.constructors[index];
+          final standing = constructors[index];
           final isTop3 = index < 3;
           final points = double.parse(standing.points);
           final percentage = maxPoints > 0 ? points / maxPoints : 0.0;

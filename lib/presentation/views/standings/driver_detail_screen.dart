@@ -4,6 +4,7 @@ import 'package:f1_fanhub/core/utils/image_helper.dart';
 import 'package:f1_fanhub/core/utils/nationality_translator.dart';
 import 'package:f1_fanhub/core/utils/race_name_translator.dart';
 import 'package:f1_fanhub/core/utils/status_translator.dart';
+import 'package:f1_fanhub/domain/entities/driver_result_progression.dart';
 import 'package:f1_fanhub/domain/entities/standing.dart';
 import 'package:f1_fanhub/presentation/viewmodels/driver_detail_viewmodel.dart';
 import 'package:flutter/material.dart';
@@ -365,6 +366,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
     ThemeData theme,
     DriverDetailViewModel viewModel,
   ) {
+    final state = viewModel.state;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
@@ -397,12 +399,12 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
             ),
             const SizedBox(height: 20),
 
-            if (viewModel.isLoading)
+            if (state.isLoading)
               const SizedBox(
                 height: 200,
                 child: Center(child: CircularProgressIndicator()),
               )
-            else if (viewModel.errorMessage != null)
+            else if (state.hasError)
               Center(
                 child: Column(
                   children: [
@@ -413,15 +415,33 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Error: ${viewModel.errorMessage}",
+                      "Error: ${state.message ?? 'No se pudo cargar'}",
                       style: TextStyle(color: theme.colorScheme.error),
                       textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               )
+            else if (state.isEmpty)
+              Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 48,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      state.message ?? 'Sin datos de progresion.',
+                      style: theme.textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              )
             else
-              _buildProgressionChart(theme, viewModel),
+              _buildProgressionChart(theme, state.data ?? []),
           ],
         ),
       ),
@@ -430,32 +450,9 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
 
   Widget _buildProgressionChart(
     ThemeData theme,
-    DriverDetailViewModel viewModel,
+    List<DriverRaceProgression> progression,
   ) {
-    if (viewModel.progression.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            children: [
-              Icon(
-                Icons.info_outline,
-                size: 48,
-                color: theme.colorScheme.primary.withValues(alpha: 0.5),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                "No hay resultados de carrera esta temporada.",
-                style: theme.textTheme.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final spots = viewModel.progression.map((p) {
+    final spots = progression.map((p) {
       double yValue = p.isDNF ? 0 : 25 - p.position.toDouble();
       return FlSpot(p.round.toDouble(), yValue);
     }).toList();
@@ -467,7 +464,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
         child: LineChart(
           LineChartData(
             minX: 1,
-            maxX: viewModel.progression.last.round.toDouble(),
+            maxX: progression.last.round.toDouble(),
             minY: 0,
             maxY: 25,
             titlesData: FlTitlesData(
@@ -592,7 +589,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                   if (touchedSpots.isEmpty) return [];
 
                   return touchedSpots.map((spot) {
-                    final data = viewModel.progression[spot.spotIndex];
+                    final data = progression[spot.spotIndex];
                     final position = 25 - spot.y.toInt();
                     final translatedStatus = StatusTranslator.translate(
                       data.status,
@@ -650,11 +647,12 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
     ThemeData theme,
     DriverDetailViewModel viewModel,
   ) {
-    if (viewModel.isLoading || viewModel.progression.isEmpty) {
+    final state = viewModel.state;
+    if (state.isLoading || state.isEmpty || state.hasError) {
       return const SizedBox.shrink();
     }
 
-    final recentResults = viewModel.progression.reversed.take(5).toList();
+    final recentResults = (state.data ?? []).reversed.take(5).toList();
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

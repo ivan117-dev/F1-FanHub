@@ -35,64 +35,100 @@ class _RaceResultsScreenState extends State<RaceResultsScreen> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<RaceResultsViewModel>();
+    final state = viewModel.state;
 
-    // 1. DEFINIMOS LAS PESTAÑAS DINÁMICAMENTE
-    // Siempre tenemos Carrera y Clasificación
-    List<Tab> tabs = [
-      const Tab(text: "Carrera"),
-      const Tab(text: "Clasificación"),
-    ];
+    if (state.isSuccess) {
+      final data = state.data!;
 
-    List<Widget> tabViews = [
-      RaceResultList(results: viewModel.raceResults),
-      QualifyingResultList(results: viewModel.qualifyingResults),
-    ];
+      // 1. DEFINIMOS LAS PESTAÑAS DINÁMICAMENTE
+      // Siempre tenemos Carrera y Clasificación
+      List<Tab> tabs = [
+        const Tab(text: "Carrera"),
+        const Tab(text: "Clasificación"),
+      ];
 
-    // A) Lógica Sprint
-    if (viewModel.sprintResults.isNotEmpty) {
-      tabs.add(const Tab(text: "Sprint"));
-      tabViews.add(RaceResultList(results: viewModel.sprintResults));
-    }
+      List<Widget> tabViews = [
+        RaceResultList(results: data.raceResults),
+        QualifyingResultList(results: data.qualifyingResults),
+      ];
 
-    // B) Lógica Pit Stops (NUEVO)
-    if (viewModel.pitStops.isNotEmpty) {
-      tabs.add(const Tab(text: "Pit Stops"));
-      tabViews.add(PitStopList(pitStops: viewModel.pitStops));
-    }
+      // A) Lógica Sprint
+      if (data.sprintResults.isNotEmpty) {
+        tabs.add(const Tab(text: "Sprint"));
+        tabViews.add(RaceResultList(results: data.sprintResults));
+      }
 
-    return DefaultTabController(
-      length: tabs.length, // Carrera, Clasificación, Sprint (si existe)
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(RaceNameTranslator.translate(widget.raceName)),
-          bottom: TabBar(
-            isScrollable: true,
-            indicatorColor: Colors.grey[300], // Un gris claro
-            labelColor: Colors.grey[200], // Un gris ligeramente más claro
-            unselectedLabelColor: Colors.white70,
-            indicatorWeight: 3,
-            tabs: tabs,
+      // B) Lógica Pit Stops (NUEVO)
+      if (data.pitStops.isNotEmpty) {
+        tabs.add(const Tab(text: "Pit Stops"));
+        tabViews.add(PitStopList(pitStops: data.pitStops));
+      }
+
+      return DefaultTabController(
+        length: tabs.length, // Carrera, Clasificación, Sprint (si existe)
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(RaceNameTranslator.translate(widget.raceName)),
+            bottom: TabBar(
+              isScrollable: true,
+              indicatorColor: Colors.grey[300], // Un gris claro
+              labelColor: Colors.grey[200], // Un gris ligeramente más claro
+              unselectedLabelColor: Colors.white70,
+              indicatorWeight: 3,
+              tabs: tabs,
+            ),
           ),
+          body: TabBarView(children: tabViews),
         ),
-        body: viewModel.isLoading
-            ? const Center(child: CircularProgressIndicator(color: appGreen))
-            : viewModel.errorMessage != null
-            ? _buildError(viewModel)
-            : TabBarView(children: tabViews),
+      );
+    }
+
+    Widget body;
+    if (state.isLoading || state.isIdle) {
+      body = const Center(child: CircularProgressIndicator(color: appGreen));
+    } else if (state.hasError) {
+      body = _buildError(state.message ?? 'Error cargando resultados');
+    } else {
+      body = _buildEmpty(state.message ?? 'Resultados aun no disponibles');
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(RaceNameTranslator.translate(widget.raceName)),
       ),
+      body: body,
     );
   }
 
-  Widget _buildError(RaceResultsViewModel viewModel) {
+  Widget _buildError(String message) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.error_outline, size: 48, color: Colors.grey),
           const SizedBox(height: 10),
-          Text(viewModel.errorMessage ?? "Error desconocido"),
+          Text(message),
           TextButton(
-            onPressed: () => viewModel.loadResults(widget.round),
+            onPressed: () =>
+                context.read<RaceResultsViewModel>().loadResults(widget.round),
+            child: const Text("Reintentar", style: TextStyle(color: appGreen)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmpty(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.inbox_outlined, size: 48, color: Colors.grey),
+          const SizedBox(height: 10),
+          Text(message),
+          TextButton(
+            onPressed: () =>
+                context.read<RaceResultsViewModel>().loadResults(widget.round),
             child: const Text("Reintentar", style: TextStyle(color: appGreen)),
           ),
         ],

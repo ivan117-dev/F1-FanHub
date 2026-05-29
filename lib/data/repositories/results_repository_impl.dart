@@ -1,6 +1,8 @@
 import 'package:f1_fanhub/core/errors/exceptions.dart';
 import 'package:f1_fanhub/data/datasources/local/results_local_datasource.dart';
 import 'package:f1_fanhub/data/datasources/remote/results_remote_datasource.dart';
+import 'package:f1_fanhub/data/utils/failure_mapper.dart';
+import 'package:f1_fanhub/domain/common/result.dart';
 import 'package:f1_fanhub/domain/entities/pit_stop.dart';
 import 'package:f1_fanhub/domain/entities/qualifying_result.dart';
 import 'package:f1_fanhub/domain/entities/race_result.dart';
@@ -13,10 +15,11 @@ class ResultsRepositoryImpl implements ResultsRepository {
   ResultsRepositoryImpl(this.remoteDataSource, this.localDataSource);
 
   @override
-  Future<List<RaceResult>> getRaceResults(String round) async {
+  Future<Result<List<RaceResult>>> getRaceResults(String round) async {
     // 1. Intento leer del caché
     try {
-      return await localDataSource.getRaceResults(round);
+      final cached = await localDataSource.getRaceResults(round);
+      return Result.success(cached);
     } on CacheException {
       // Fallo silencioso, vamos a la red
     }
@@ -30,16 +33,19 @@ class ResultsRepositoryImpl implements ResultsRepository {
         localDataSource.cacheRaceResults(round, remoteResults);
       }
 
-      return remoteResults;
+      return Result.success(remoteResults);
     } catch (e) {
-      rethrow;
+      return Result.failure(mapExceptionToFailure(e));
     }
   }
 
   @override
-  Future<List<QualifyingResult>> getQualifyingResults(String round) async {
+  Future<Result<List<QualifyingResult>>> getQualifyingResults(
+    String round,
+  ) async {
     try {
-      return await localDataSource.getQualifyingResults(round);
+      final cached = await localDataSource.getQualifyingResults(round);
+      return Result.success(cached);
     } on CacheException {
       // Continuar
     }
@@ -51,16 +57,17 @@ class ResultsRepositoryImpl implements ResultsRepository {
       if (remoteResults.isNotEmpty) {
         localDataSource.cacheQualifyingResults(round, remoteResults);
       }
-      return remoteResults;
+      return Result.success(remoteResults);
     } catch (e) {
-      rethrow;
+      return Result.failure(mapExceptionToFailure(e));
     }
   }
 
   @override
-  Future<List<RaceResult>> getSprintResults(String round) async {
+  Future<Result<List<RaceResult>>> getSprintResults(String round) async {
     try {
-      return await localDataSource.getSprintResults(round);
+      final cached = await localDataSource.getSprintResults(round);
+      return Result.success(cached);
     } on CacheException {
       // Continuar
     }
@@ -72,17 +79,17 @@ class ResultsRepositoryImpl implements ResultsRepository {
       if (remoteResults.isNotEmpty) {
         localDataSource.cacheSprintResults(round, remoteResults);
       }
-      return remoteResults;
+      return Result.success(remoteResults);
     } catch (e) {
-      // Si falla sprint (ej. no existe), retornamos vacío y no cacheamos error
-      return [];
+      return Result.failure(mapExceptionToFailure(e));
     }
   }
 
   @override
-  Future<List<PitStop>> getPitStops(String round) async {
+  Future<Result<List<PitStop>>> getPitStops(String round) async {
     try {
-      return await localDataSource.getPitStops(round);
+      final cached = await localDataSource.getPitStops(round);
+      return Result.success(cached);
     } on CacheException {
       // Si no hay caché, continuamos a la red sin hacer nada
     }
@@ -94,10 +101,9 @@ class ResultsRepositoryImpl implements ResultsRepository {
         localDataSource.cachePitStops(round, remoteData);
       }
 
-      return remoteData;
+      return Result.success(remoteData);
     } catch (e) {
-      // Si falla red y no había caché, retornamos vacío
-      return [];
+      return Result.failure(mapExceptionToFailure(e));
     }
   }
 }

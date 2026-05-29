@@ -1,4 +1,6 @@
 import 'package:f1_fanhub/data/datasources/remote/driver_stats_remote_datasource.dart';
+import 'package:f1_fanhub/data/utils/failure_mapper.dart';
+import 'package:f1_fanhub/domain/common/result.dart';
 import 'package:f1_fanhub/domain/entities/driver_result_progression.dart';
 import 'package:f1_fanhub/domain/repositories/driver_stats_repository.dart';
 
@@ -8,13 +10,14 @@ class DriverStatsRepositoryImpl implements DriverStatsRepository {
   DriverStatsRepositoryImpl(this.remoteDataSource);
 
   @override
-  Future<List<DriverRaceProgression>> getSeasonProgression(
+  Future<Result<List<DriverRaceProgression>>> getSeasonProgression(
     String driverId,
   ) async {
     try {
-      return await remoteDataSource.fetchSeasonResults(driverId);
+      final results = await remoteDataSource.fetchSeasonResults(driverId);
+      return Result.success(results);
     } catch (e) {
-      throw Exception('Error al obtener la progresión del piloto: $e');
+      return Result.failure(mapExceptionToFailure(e));
     }
   }
 }

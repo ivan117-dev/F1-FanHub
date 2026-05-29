@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<HomeViewModel>();
+    final state = viewModel.state;
 
     return Scaffold(
       appBar: AppBar(
@@ -49,76 +50,126 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: viewModel.isLoading
+      body: state.isLoading || state.isIdle
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFF69C56C)),
             )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20), // ← Cambiado
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. TARJETA DE PRÓXIMA CARRERA
-                  if (viewModel.nextRace != null) ...[
-                    NextRaceCard(race: viewModel.nextRace!),
-                  ] else ...[
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text("Fin de temporada"),
-                      ),
-                    ),
-                  ],
+          : state.hasError
+          ? _buildError(state.message ?? 'Error cargando el dashboard')
+          : state.isEmpty
+          ? _buildEmpty(state.message ?? 'Sin datos disponibles')
+          : _buildContent(state.data!),
+    );
+  }
 
-                  const SizedBox(height: 24),
+  Widget _buildError(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => context.read<HomeViewModel>().loadDashboard(),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                  // 2. TÍTULO TABLA DE POSICIONES
-                  const Text(
-                    "Tabla de Posiciones",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
+  Widget _buildEmpty(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.inbox_outlined, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => context.read<HomeViewModel>().loadDashboard(),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                  // 3. ROW CON LAS DOS TABLAS (PILOTOS Y CONSTRUCTORES)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // TARJETA PILOTOS
-                      MiniStandingsCard(
-                        title: "PILOTOS",
-                        items: viewModel.topDrivers,
-                        isDriver: true,
-                        onTapMore: () {
-                          widget.onTabChangeRequest?.call(2);
-                        },
-                      ),
-                      const SizedBox(width: 16), // Espaciado entre tarjetas
-                      // TARJETA CONSTRUCTORES
-                      MiniStandingsCard(
-                        title: "CONSTRUCTORES",
-                        items: viewModel.topConstructors,
-                        isDriver: false,
-                        onTapMore: () {
-                          widget.onTabChangeRequest?.call(3);
-                        },
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-                  // 4. TARJETA DE ÚLTIMA CARRERA
-                  // Solo la mostramos si existe una carrera anterior (ej. no estamos en la primera fecha)
-                  if (viewModel.lastRace != null) ...[
-                    LastRaceCard(
-                      race: viewModel.lastRace!,
-                      winner:
-                          viewModel.lastRaceWinner, // <--- Pasamos el ganador
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ],
+  Widget _buildContent(HomeDashboard dashboard) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. TARJETA DE PRÓXIMA CARRERA
+          if (dashboard.nextRace != null) ...[
+            NextRaceCard(race: dashboard.nextRace!),
+          ] else ...[
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text("Fin de temporada"),
               ),
             ),
+          ],
+
+          const SizedBox(height: 24),
+
+          // 2. TÍTULO TABLA DE POSICIONES
+          const Text(
+            "Tabla de Posiciones",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+
+          // 3. ROW CON LAS DOS TABLAS (PILOTOS Y CONSTRUCTORES)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // TARJETA PILOTOS
+              MiniStandingsCard(
+                title: "PILOTOS",
+                items: dashboard.topDrivers,
+                isDriver: true,
+                onTapMore: () {
+                  widget.onTabChangeRequest?.call(2);
+                },
+              ),
+              const SizedBox(width: 16),
+              // TARJETA CONSTRUCTORES
+              MiniStandingsCard(
+                title: "CONSTRUCTORES",
+                items: dashboard.topConstructors,
+                isDriver: false,
+                onTapMore: () {
+                  widget.onTabChangeRequest?.call(3);
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+          // 4. TARJETA DE ÚLTIMA CARRERA
+          if (dashboard.lastRace != null) ...[
+            LastRaceCard(
+              race: dashboard.lastRace!,
+              winner: dashboard.lastRaceWinner,
+            ),
+            const SizedBox(height: 24),
+          ],
+        ],
+      ),
     );
   }
 }

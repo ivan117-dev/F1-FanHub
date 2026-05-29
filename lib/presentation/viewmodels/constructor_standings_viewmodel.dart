@@ -1,5 +1,6 @@
 import 'package:f1_fanhub/domain/entities/standing.dart';
 import 'package:f1_fanhub/domain/usecases/get_constructor_standings_usecase.dart';
+import 'package:f1_fanhub/presentation/common/view_state.dart';
 import 'package:flutter/material.dart';
 
 class ConstructorStandingsViewModel extends ChangeNotifier {
@@ -7,10 +8,7 @@ class ConstructorStandingsViewModel extends ChangeNotifier {
 
   ConstructorStandingsViewModel(this._getConstructorStandingsUseCase);
 
-  // Estado
-  List<ConstructorStanding> constructors = [];
-  bool isLoading = false;
-  String? errorMessage;
+  ViewState<List<ConstructorStanding>> state = const ViewState.idle();
 
   // Carga inicial
   Future<void> loadStandings() async {
@@ -24,17 +22,26 @@ class ConstructorStandingsViewModel extends ChangeNotifier {
 
   // Lógica centralizada
   Future<void> _loadData({required bool force}) async {
-    isLoading = true;
-    errorMessage = null;
+    state = const ViewState.loading();
     notifyListeners();
 
     try {
-      constructors = await _getConstructorStandingsUseCase(forceUpdate: force);
+      final result = await _getConstructorStandingsUseCase(forceUpdate: force);
+      result.when(
+        success: (data) {
+          if (data.isEmpty) {
+            state = const ViewState.empty('Sin datos de constructores.');
+          } else {
+            state = ViewState.success(data);
+          }
+        },
+        failure: (failure) {
+          state = ViewState.error(failure.message);
+        },
+      );
     } catch (e) {
-      errorMessage = e.toString();
-    } finally {
-      isLoading = false;
-      notifyListeners();
+      state = ViewState.error(e.toString());
     }
+    notifyListeners();
   }
 }

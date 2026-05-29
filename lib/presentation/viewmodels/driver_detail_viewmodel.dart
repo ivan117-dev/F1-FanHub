@@ -1,5 +1,6 @@
 import 'package:f1_fanhub/domain/entities/driver_result_progression.dart';
 import 'package:f1_fanhub/domain/usecases/get_driver_season_progression_usecase.dart';
+import 'package:f1_fanhub/presentation/common/view_state.dart';
 import 'package:flutter/material.dart';
 
 class DriverDetailViewModel extends ChangeNotifier {
@@ -12,9 +13,7 @@ class DriverDetailViewModel extends ChangeNotifier {
 
   DriverDetailViewModel(this._getProgressionUseCase, this.driverId);
 
-  bool isLoading = false;
-  String? errorMessage;
-  List<DriverRaceProgression> progression = [];
+  ViewState<List<DriverRaceProgression>> state = const ViewState.idle();
 
   // 1. Método para marcar la clase como dispuesta
   @override
@@ -24,7 +23,7 @@ class DriverDetailViewModel extends ChangeNotifier {
   }
 
   Future<void> loadProgression() async {
-    isLoading = true;
+    state = const ViewState.loading();
 
     // Verificamos si estamos dispuestos antes de empezar la carga
     if (!_isDisposed) notifyListeners();
@@ -35,14 +34,24 @@ class DriverDetailViewModel extends ChangeNotifier {
       // 2. VERIFICACIÓN: Ignoramos la respuesta si ya salimos de la pantalla
       if (_isDisposed) return;
 
-      progression = results;
+      results.when(
+        success: (data) {
+          if (data.isEmpty) {
+            state = const ViewState.empty('Sin datos de progresion.');
+          } else {
+            state = ViewState.success(data);
+          }
+        },
+        failure: (failure) {
+          state = ViewState.error(failure.message);
+        },
+      );
     } catch (e) {
       if (_isDisposed) return;
-      errorMessage = e.toString();
+      state = ViewState.error(e.toString());
     } finally {
       // Verificamos la condición INVERSA: si NO está dispuesto, limpiamos.
       if (!_isDisposed) {
-        isLoading = false;
         notifyListeners();
       }
       // El método finaliza naturalmente aquí, sin el 'return' problemático.

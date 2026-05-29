@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:f1_fanhub/core/errors/exceptions.dart';
+import 'package:f1_fanhub/data/utils/failure_mapper.dart';
+import 'package:f1_fanhub/domain/common/result.dart';
 import 'package:f1_fanhub/domain/entities/race.dart';
 import 'package:f1_fanhub/domain/repositories/race_repository.dart';
 import 'package:f1_fanhub/data/datasources/remote/race_remote_datasource.dart';
@@ -15,14 +17,16 @@ class RaceRepositoryImpl implements RaceRepository {
   });
 
   @override
-  Future<List<Race>> getCurrentSeasonRaces({bool forceUpdate = false}) async {
+  Future<Result<List<Race>>> getCurrentSeasonRaces({
+    bool forceUpdate = false,
+  }) async {
     // ESTRATEGIA: Cache First (con expiración)
 
     // 1. Preguntamos: ¿Hay caché y es válido?
     if (!forceUpdate && localDataSource.isCacheValid()) {
       try {
         final localRaces = await localDataSource.getLastRaces();
-        return localRaces;
+        return Result.success(localRaces);
       } on CacheException {
         // <--- Capturamos específicamente CacheException
         // Si no hay caché, no pasa nada grave, solo seguimos el flujo normal
@@ -38,17 +42,19 @@ class RaceRepositoryImpl implements RaceRepository {
       // 3. ¡Importante! Guardamos lo nuevo en caché para la próxima
       localDataSource.cacheRaces(remoteRaces);
 
-      return remoteRaces;
+      return Result.success(remoteRaces);
       // ignore: unused_catch_clause
     } on DioException catch (e) {
       // 4. Si falla la red (ej. sin internet), intentamos mostrar el caché viejo como respaldo
       // aunque haya expirado, es mejor que mostrar un error vacío.
       try {
-        return await localDataSource.getLastRaces();
+        final cached = await localDataSource.getLastRaces();
+        return Result.success(cached);
       } catch (_) {
-        // Si no hay red y tampoco caché, lanzamos el error original
-        throw ServerException("No hay conexión y no hay datos guardados.");
+        return Result.failure(mapExceptionToFailure(e));
       }
+    } catch (e) {
+      return Result.failure(mapExceptionToFailure(e));
     }
   }
 }
